@@ -188,3 +188,4 @@ class AlgoSpeakerAPI:
             return response.status_code == 200, response.text
         except Exception as e:
             return False, str(e)
+

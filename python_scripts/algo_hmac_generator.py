@@ -76,3 +76,4 @@ if __name__ == "__main__":
     print(f"HMAC Key: {auth_data['hmac_key']}")
     print(f"Date: {auth_data['date_header']}")
     print(f"Authorization: hmac admin:{auth_data['nonce']}:{auth_data['hmac_key']}")
+

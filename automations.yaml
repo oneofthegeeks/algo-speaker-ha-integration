@@ -156,3 +156,4 @@
                 entity_id: input_number.algo_volume
               data:
                 value: 75  # Higher volume during day
+
