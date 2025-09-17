@@ -3,7 +3,6 @@
 
 # Core dependencies
 requests>=2.31.0
-hashlib-compat>=1.0.0
 
 # Development dependencies (optional)
 pytest>=7.0.0
