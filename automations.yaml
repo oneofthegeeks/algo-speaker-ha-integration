@@ -1,0 +1,158 @@
+# Algo Speaker Automations
+# Add these to your automations.yaml file
+
+# Main alert trigger automation
+- id: algo_trigger_alert
+  alias: "Trigger Algo Alert"
+  description: "Trigger selected alert type on Algo speaker"
+  trigger:
+    - platform: state
+      entity_id: button.algo_trigger_alert
+      to: "pressed"
+  condition: []
+  action:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: input_select.algo_alert_type
+              state: "Door Bell"
+          sequence:
+            - service: script.algo_door_bell
+        - conditions:
+            - condition: state
+              entity_id: input_select.algo_alert_type
+              state: "Emergency Alert"
+          sequence:
+            - service: script.algo_emergency_alert
+        - conditions:
+            - condition: state
+              entity_id: input_select.algo_alert_type
+              state: "Page Notification"
+          sequence:
+            - service: script.algo_page_notification
+        - conditions:
+            - condition: state
+              entity_id: input_select.algo_alert_type
+              state: "Custom Tone"
+          sequence:
+            - service: script.algo_custom_tone
+        - conditions:
+            - condition: state
+              entity_id: input_select.algo_alert_type
+              state: "Strobe Light"
+          sequence:
+            - service: script.algo_strobe_only
+        - conditions:
+            - condition: state
+              entity_id: input_select.algo_alert_type
+              state: "Combined Alert"
+          sequence:
+            - service: script.algo_emergency_alert
+      default:
+        - service: script.algo_page_notification
+
+# Stop alert automation
+- id: algo_stop_alert
+  alias: "Stop Algo Alert"
+  description: "Stop all Algo speaker alerts"
+  trigger:
+    - platform: state
+      entity_id: button.algo_stop_alert
+      to: "pressed"
+  action:
+    - service: script.algo_stop_all
+
+# Example: Door sensor trigger
+- id: algo_door_sensor_alert
+  alias: "Door Sensor Algo Alert"
+  description: "Trigger alert when door opens"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.front_door  # Replace with your door sensor
+      to: "on"
+  condition:
+    - condition: time
+      after: "08:00:00"
+      before: "22:00:00"
+  action:
+    - service: script.algo_door_bell
+
+# Example: Motion sensor trigger
+- id: algo_motion_alert
+  alias: "Motion Sensor Algo Alert"
+  description: "Trigger alert when motion detected"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.motion_sensor  # Replace with your motion sensor
+      to: "on"
+  condition:
+    - condition: state
+      entity_id: input_boolean.algo_motion_alerts
+      state: "on"
+  action:
+    - service: script.algo_page_notification
+
+# Example: Time-based alert
+- id: algo_daily_announcement
+  alias: "Daily Announcement"
+  description: "Play daily announcement at specific time"
+  trigger:
+    - platform: time
+      at: "09:00:00"
+  condition:
+    - condition: state
+      entity_id: input_boolean.algo_daily_announcements
+      state: "on"
+  action:
+    - service: script.algo_page_notification
+
+# Example: Emergency alert from other sensors
+- id: algo_emergency_trigger
+  alias: "Emergency Alert Trigger"
+  description: "Trigger emergency alert from various sensors"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.smoke_detector  # Replace with your smoke detector
+      to: "on"
+    - platform: state
+      entity_id: binary_sensor.water_leak  # Replace with your water leak sensor
+      to: "on"
+    - platform: state
+      entity_id: binary_sensor.security_alarm  # Replace with your security alarm
+      to: "on"
+  action:
+    - service: script.algo_emergency_alert
+    - delay: "00:00:05"  # Wait 5 seconds
+    - service: script.algo_emergency_alert  # Repeat for emphasis
+
+# Example: Volume control based on time of day
+- id: algo_volume_control
+  alias: "Algo Volume Control"
+  description: "Adjust volume based on time of day"
+  trigger:
+    - platform: time
+      at: "22:00:00"
+    - platform: time
+      at: "08:00:00"
+  action:
+    - choose:
+        - conditions:
+            - condition: time
+              after: "22:00:00"
+              before: "08:00:00"
+          sequence:
+            - service: input_number.set_value
+              target:
+                entity_id: input_number.algo_volume
+              data:
+                value: 25  # Lower volume at night
+        - conditions:
+            - condition: time
+              after: "08:00:00"
+              before: "22:00:00"
+          sequence:
+            - service: input_number.set_value
+              target:
+                entity_id: input_number.algo_volume
+              data:
+                value: 75  # Higher volume during day

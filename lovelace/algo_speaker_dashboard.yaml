@@ -1,0 +1,156 @@
+# Algo Speaker Dashboard for Lovelace UI
+# Add this as a new view in your Lovelace configuration
+
+title: "Algo Speaker Control"
+path: "algo-speaker"
+icon: "mdi:speaker"
+cards:
+  # Status Cards
+  - type: entities
+    title: "Speaker Status"
+    entities:
+      - sensor.algo_speaker_status
+      - sensor.algo_speaker_volume_level
+      - sensor.algo_speaker_device_info
+
+  # Alert Type Selection
+  - type: entities
+    title: "Alert Configuration"
+    entities:
+      - input_select.algo_alert_type
+      - input_text.algo_custom_tone
+      - input_number.algo_volume
+      - input_number.algo_strobe_pattern
+      - input_select.algo_strobe_color1
+      - input_select.algo_strobe_color2
+      - input_number.algo_strobe_brightness
+
+  # Control Buttons
+  - type: button
+    name: "Trigger Alert"
+    entity: button.algo_trigger_alert
+    icon: "mdi:speaker"
+    tap_action:
+      action: call-service
+      service: button.press
+      target:
+        entity_id: button.algo_trigger_alert
+
+  - type: button
+    name: "Stop Alert"
+    entity: button.algo_stop_alert
+    icon: "mdi:speaker-off"
+    tap_action:
+      action: call-service
+      service: button.press
+      target:
+        entity_id: button.algo_stop_alert
+
+  # Quick Action Buttons
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: "Door Bell"
+        icon: "mdi:doorbell"
+        tap_action:
+          action: call-service
+          service: script.algo_door_bell
+
+      - type: button
+        name: "Emergency"
+        icon: "mdi:alert"
+        tap_action:
+          action: call-service
+          service: script.algo_emergency_alert
+
+      - type: button
+        name: "Page"
+        icon: "mdi:page-layout-body"
+        tap_action:
+          action: call-service
+          service: script.algo_page_notification
+
+      - type: button
+        name: "Strobe"
+        icon: "mdi:lightbulb"
+        tap_action:
+          action: call-service
+          service: script.algo_strobe_only
+
+  # Volume Control
+  - type: entities
+    title: "Volume Control"
+    entities:
+      - entity: input_number.algo_volume
+        name: "Speaker Volume"
+        icon: "mdi:volume-high"
+
+  # Strobe Control
+  - type: entities
+    title: "Strobe Light Control"
+    entities:
+      - entity: input_number.algo_strobe_pattern
+        name: "Pattern"
+        icon: "mdi:lightbulb-group"
+      - entity: input_select.algo_strobe_color1
+        name: "Primary Color"
+        icon: "mdi:palette"
+      - entity: input_select.algo_strobe_color2
+        name: "Secondary Color"
+        icon: "mdi:palette"
+      - entity: input_number.algo_strobe_brightness
+        name: "Brightness"
+        icon: "mdi:brightness-6"
+
+  # Test Buttons
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: "Test Tone 1"
+        icon: "mdi:music-note"
+        tap_action:
+          action: call-service
+          service: rest_command.algo_play_tone
+          data:
+            path: "test-tone-1.wav"
+            loop: false
+            volume: "{{ states('input_number.algo_volume') | int }}"
+
+      - type: button
+        name: "Test Tone 2"
+        icon: "mdi:music-note"
+        tap_action:
+          action: call-service
+          service: rest_command.algo_play_tone
+          data:
+            path: "test-tone-2.wav"
+            loop: false
+            volume: "{{ states('input_number.algo_volume') | int }}"
+
+  # Device Information
+  - type: markdown
+    content: |
+      ## Algo Speaker Models Supported
+      - **8180**: Basic IP speaker
+      - **8188**: IP speaker with additional features
+      - **8189**: IP speaker with enhanced capabilities
+      - **8196**: Advanced IP speaker with full feature set
+
+      ## Available Audio Files
+      Make sure these audio files are uploaded to your Algo speaker:
+      - `door-bell.wav`
+      - `emergency-alert.wav`
+      - `page-notif.wav`
+      - `test-tone-1.wav`
+      - `test-tone-2.wav`
+
+  # Troubleshooting
+  - type: entities
+    title: "Troubleshooting"
+    entities:
+      - entity: sensor.algo_speaker_device_info
+        name: "Device Info"
+        icon: "mdi:information"
+      - entity: sensor.algo_speaker_volume
+        name: "Current Volume"
+        icon: "mdi:volume-high"

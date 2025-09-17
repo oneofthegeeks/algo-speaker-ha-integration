@@ -1,0 +1,242 @@
+# Algo Speaker Integration Configuration
+# Add this to your Home Assistant configuration.yaml
+
+# REST Command sensors for device status
+rest:
+  - resource: "http://YOUR_SPEAKER_IP/api/settings/device.info"
+    scan_interval: 60
+    name: "Algo Speaker Device Info"
+    method: GET
+    headers:
+      Authorization: "hmac admin:{{ nonce }}:{{ hmac_key }}"
+      Date: "{{ date_header }}"
+    verify_ssl: false
+
+  - resource: "http://YOUR_SPEAKER_IP/api/settings/audio.page.vol"
+    scan_interval: 30
+    name: "Algo Speaker Volume"
+    method: GET
+    headers:
+      Authorization: "hmac admin:{{ nonce }}:{{ hmac_key }}"
+      Date: "{{ date_header }}"
+    verify_ssl: false
+
+# REST Commands for controlling the speaker
+rest_command:
+  # Play tone/announcement
+  algo_play_tone:
+    url: "http://YOUR_SPEAKER_IP/api/controls/tone/start"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+      Content-MD5: "{{ content_md5 }}"
+      Authorization: "hmac admin:{{ nonce }}:{{ hmac_key }}"
+      Date: "{{ date_header }}"
+    payload: '{"path": "{{ path }}", "loop": {{ loop }}{% if volume is defined %}, "volume": {{ volume }}{% endif %}}'
+    verify_ssl: false
+
+  # Stop tone/announcement
+  algo_stop_tone:
+    url: "http://YOUR_SPEAKER_IP/api/controls/tone/stop"
+    method: POST
+    headers:
+      Authorization: "hmac admin:{{ nonce }}:{{ hmac_key }}"
+      Date: "{{ date_header }}"
+    verify_ssl: false
+
+  # Start strobe light
+  algo_start_strobe:
+    url: "http://YOUR_SPEAKER_IP/api/controls/strobe/start"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+      Content-MD5: "{{ content_md5 }}"
+      Authorization: "hmac admin:{{ nonce }}:{{ hmac_key }}"
+      Date: "{{ date_header }}"
+    payload: '{"pattern": {{ pattern }}, "color1": "{{ color1 }}", "color2": "{{ color2 }}", "ledlvl": "{{ ledlvl }}"}'
+    verify_ssl: false
+
+  # Stop strobe light
+  algo_stop_strobe:
+    url: "http://YOUR_SPEAKER_IP/api/controls/strobe/stop"
+    method: POST
+    headers:
+      Authorization: "hmac admin:{{ nonce }}:{{ hmac_key }}"
+      Date: "{{ date_header }}"
+    verify_ssl: false
+
+  # Set volume
+  algo_set_volume:
+    url: "http://YOUR_SPEAKER_IP/api/settings/audio.page.vol"
+    method: PUT
+    headers:
+      Content-Type: "application/json"
+      Content-MD5: "{{ content_md5 }}"
+      Authorization: "hmac admin:{{ nonce }}:{{ hmac_key }}"
+      Date: "{{ date_header }}"
+    payload: '{"audio.page.vol": "{{ volume }}"}'
+    verify_ssl: false
+
+# Input select for choosing alert types
+input_select:
+  algo_alert_type:
+    name: "Algo Alert Type"
+    options:
+      - "Door Bell"
+      - "Emergency Alert"
+      - "Page Notification"
+      - "Custom Tone"
+      - "Strobe Light"
+      - "Combined Alert"
+    initial: "Door Bell"
+
+# Input text for custom tone path
+input_text:
+  algo_custom_tone:
+    name: "Custom Tone Path"
+    initial: "page-notif.wav"
+    max: 50
+
+# Number input for volume control
+input_number:
+  algo_volume:
+    name: "Algo Speaker Volume"
+    min: 0
+    max: 100
+    step: 5
+    initial: 50
+    unit_of_measurement: "%"
+
+# Number input for strobe pattern
+input_number:
+  algo_strobe_pattern:
+    name: "Strobe Pattern"
+    min: 1
+    max: 10
+    step: 1
+    initial: 1
+
+# Select for strobe colors
+input_select:
+  algo_strobe_color1:
+    name: "Strobe Color 1"
+    options:
+      - "red"
+      - "blue"
+      - "green"
+      - "amber"
+    initial: "red"
+
+  algo_strobe_color2:
+    name: "Strobe Color 2"
+    options:
+      - "red"
+      - "blue"
+      - "green"
+      - "amber"
+    initial: "blue"
+
+# Number input for strobe brightness
+input_number:
+  algo_strobe_brightness:
+    name: "Strobe Brightness"
+    min: 0
+    max: 255
+    step: 5
+    initial: 100
+
+# Scripts for different alert types
+script:
+  algo_door_bell:
+    alias: "Algo Door Bell"
+    sequence:
+      - service: rest_command.algo_play_tone
+        data:
+          path: "door-bell.wav"
+          loop: false
+          volume: "{{ states('input_number.algo_volume') | int }}"
+
+  algo_emergency_alert:
+    alias: "Algo Emergency Alert"
+    sequence:
+      - service: rest_command.algo_play_tone
+        data:
+          path: "emergency-alert.wav"
+          loop: true
+          volume: "{{ states('input_number.algo_volume') | int }}"
+      - service: rest_command.algo_start_strobe
+        data:
+          pattern: "{{ states('input_number.algo_strobe_pattern') | int }}"
+          color1: "{{ states('input_select.algo_strobe_color1') }}"
+          color2: "{{ states('input_select.algo_strobe_color2') }}"
+          ledlvl: "{{ states('input_number.algo_strobe_brightness') | int }}"
+
+  algo_page_notification:
+    alias: "Algo Page Notification"
+    sequence:
+      - service: rest_command.algo_play_tone
+        data:
+          path: "page-notif.wav"
+          loop: false
+          volume: "{{ states('input_number.algo_volume') | int }}"
+
+  algo_custom_tone:
+    alias: "Algo Custom Tone"
+    sequence:
+      - service: rest_command.algo_play_tone
+        data:
+          path: "{{ states('input_text.algo_custom_tone') }}"
+          loop: false
+          volume: "{{ states('input_number.algo_volume') | int }}"
+
+  algo_strobe_only:
+    alias: "Algo Strobe Only"
+    sequence:
+      - service: rest_command.algo_start_strobe
+        data:
+          pattern: "{{ states('input_number.algo_strobe_pattern') | int }}"
+          color1: "{{ states('input_select.algo_strobe_color1') }}"
+          color2: "{{ states('input_select.algo_strobe_color2') }}"
+          ledlvl: "{{ states('input_number.algo_strobe_brightness') | int }}"
+
+  algo_stop_all:
+    alias: "Algo Stop All"
+    sequence:
+      - service: rest_command.algo_stop_tone
+      - service: rest_command.algo_stop_strobe
+
+# Button entities for easy control
+button:
+  algo_trigger_alert:
+    name: "Trigger Algo Alert"
+    icon: "mdi:speaker"
+    
+  algo_stop_alert:
+    name: "Stop Algo Alert"
+    icon: "mdi:speaker-off"
+
+# Template sensors for status
+template:
+  - sensor:
+      - name: "Algo Speaker Status"
+        state: >
+          {% if states('sensor.algo_speaker_device_info') != 'unavailable' %}
+            Online
+          {% else %}
+            Offline
+          {% endif %}
+        icon: >
+          {% if states('sensor.algo_speaker_device_info') != 'unavailable' %}
+            mdi:speaker
+          {% else %}
+            mdi:speaker-off
+          {% endif %}
+
+      - name: "Algo Speaker Volume Level"
+        state: >
+          {% if states('sensor.algo_speaker_volume') != 'unavailable' %}
+            {{ states('sensor.algo_speaker_volume') }}
+          {% else %}
+            Unknown
+          {% endif %}
+        unit_of_measurement: "dB"
