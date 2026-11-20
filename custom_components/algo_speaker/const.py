@@ -10,6 +10,8 @@ MANUFACTURER: Final = "Algo"
 CONF_HOSTS: Final = "hosts"
 CONF_STATIONS: Final = "stations"
 CONF_SCAN_INTERVAL: Final = "scan_interval"
+# "standard" (HMAC, default), "basic" (https only) or "none". Chosen explicitly, never guessed.
+CONF_AUTH_MODE: Final = "auth_mode"
 # Per-host identity (model, MAC, firmware, read-only) cached in entry.data so a device that is
 # offline when Home Assistant starts still gets its entities (shown unavailable) instead of
 # holding back the whole entry.

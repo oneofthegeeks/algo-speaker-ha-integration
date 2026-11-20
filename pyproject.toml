@@ -18,7 +18,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
 ignore = ["S101"]  # assert in tests
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S324"]  # MD5 is part of Algo's signing protocol
+"tests/*" = ["S105", "S106", "S324"]  # fake passwords; MD5 is part of Algo signing
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
