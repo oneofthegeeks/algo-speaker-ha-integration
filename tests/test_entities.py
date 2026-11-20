@@ -340,4 +340,8 @@ async def test_diagnostics_redact_password(hass: HomeAssistant, fleet: Fleet) ->
     diag = await async_get_config_entry_diagnostics(hass, fleet.entry)  # type: ignore[attr-defined]
     assert diag["entry"]["data"][CONF_PASSWORD] == "**REDACTED**"
     assert PASSWORD not in str(diag)
+    text = str(diag)
+    for secret in ("Page, Successful", "00:22:ee:18:1a:ce", "00:22:ee:00:83:01"):
+        assert secret not in text
+    assert diag["devices"][HOST_8410]["data"]["status"]["SIP Registration"] == "**REDACTED**"
     assert diag["devices"][HOST_8301]["identity"]["model"] == "8301"

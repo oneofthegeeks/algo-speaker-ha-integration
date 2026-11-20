@@ -11,7 +11,20 @@ from homeassistant.core import HomeAssistant
 
 from . import AlgoConfigEntry
 
-TO_REDACT = {CONF_PASSWORD}
+# Diagnostics get attached to public issues: drop the password and the status fields that
+# identify the house or the SIP account (location, SIP token, addresses).
+TO_REDACT = {
+    CONF_PASSWORD,
+    "SIP Registration",
+    "Weather Status",
+    "Last Weather Update",
+    "IPv4",
+    "IPv6",
+    "MAC",
+    "MAC Address",
+    "mac",
+    "Device Name",
+}
 
 
 async def async_get_config_entry_diagnostics(
@@ -20,13 +33,16 @@ async def async_get_config_entry_diagnostics(
     """Entry config plus what each device last reported."""
     devices = {}
     for host, c in entry.runtime_data.coordinators.items():
-        devices[host] = {
-            "identity": c.identity.as_dict(),
-            "scheme": c.client.scheme,
-            "auth_mode": c.client.auth_mode,
-            "last_update_success": c.last_update_success,
-            "data": asdict(c.data) if c.data else None,
-        }
+        devices[host] = async_redact_data(
+            {
+                "identity": c.identity.as_dict(),
+                "scheme": c.client.scheme,
+                "auth_mode": c.client.auth_mode,
+                "last_update_success": c.last_update_success,
+                "data": asdict(c.data) if c.data else None,
+            },
+            TO_REDACT,
+        )
     return {
         "entry": async_redact_data(entry.as_dict(), TO_REDACT),
         "devices": devices,
