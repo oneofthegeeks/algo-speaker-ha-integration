@@ -101,12 +101,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: AlgoConfigEntry) -> bool
             entry, data={**entry.data, CONF_DEVICES: {h: cache[h] for h in hosts if h in cache}}
         )
 
-    coordinators: dict[str, AlgoCoordinator] = {}
+    coordinators = {
+        identity.host: AlgoCoordinator(hass, entry, clients[identity.host], identity, scan_interval)
+        for identity in identities
+    }
+    # async_refresh, not first_refresh: one dead device must not hold back the others. Run
+    # together so each offline device's timeout isn't added one after another.
+    await asyncio.gather(*(c.async_refresh() for c in coordinators.values()))
     for identity in identities:
-        coordinator = AlgoCoordinator(hass, entry, clients[identity.host], identity, scan_interval)
-        # async_refresh, not first_refresh: one dead device must not hold back the others.
-        await coordinator.async_refresh()
-        coordinators[identity.host] = coordinator
         _sync_read_only_issue(hass, identity)
 
     entry.runtime_data = AlgoRuntimeData(coordinators=coordinators, stations=stations)
