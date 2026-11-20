@@ -20,3 +20,5 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
+          # no logo in the Home Assistant brands repo; not needed for a custom repository
+          ignore: brands
