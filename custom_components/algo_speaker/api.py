@@ -3,12 +3,16 @@
 Everything here was checked against real devices (8301, 8410, 8186, 8188) unless noted:
 
 * Base URL: https first (self-signed certificates, so no verification), http if https cannot
-  connect at all. The scheme that worked is remembered per device.
-* Auth "Standard": an HMAC-SHA256 keyed with the REST API password over
-  ``METHOD:PATH[:MD5:CONTENT-TYPE]:TS:NONCE``. A device on auth "None" accepts signed
-  requests too. A wrong password answers 403 with an empty body; a device set to "Basic" auth
-  answers a signed request the same way, so a 403 is retried once with Basic, and the mode
-  that worked is remembered per device.
+  connect at all. The scheme that worked is remembered per device, and settling on http is
+  logged once as a warning.
+* Auth mode is chosen explicitly (config flow), never guessed:
+  - "standard": an HMAC-SHA256 keyed with the REST API password over
+    ``METHOD:PATH[:MD5:CONTENT-TYPE]:TS:NONCE``. Never reveals the password, so it may go
+    over http. A device on auth "None" accepts signed requests too.
+  - "basic": base64 admin:password, i.e. the password in recoverable form. Sent over https
+    ONLY; a device that cannot be reached on https fails rather than fall back to http.
+  - "none": no Authorization header.
+  A wrong password answers 403 with an empty body.
 * Devices answer one request at a time (~300 ms each), so each client serialises its
   requests behind a lock.
 """
@@ -49,6 +53,8 @@ DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=10, connect=5)
 CONTENT_TYPE_JSON = "application/json"
 AUTH_STANDARD = "standard"
 AUTH_BASIC = "basic"
+AUTH_NONE = "none"
+AUTH_MODES = (AUTH_STANDARD, AUTH_BASIC, AUTH_NONE)
 
 _MODEL_RE = re.compile(r"\b(8\d{3}S?)\b")
 _DB_RE = re.compile(r"^\s*(-?\d+)\s*dB\s*$", re.IGNORECASE)
@@ -205,30 +211,37 @@ class AlgoClient:
         session: aiohttp.ClientSession,
         host: str,
         password: str | None,
+        auth_mode: str = AUTH_STANDARD,
         timeout: aiohttp.ClientTimeout = DEFAULT_TIMEOUT,
     ) -> None:
         """Set up the client; nothing is sent until the first request."""
+        if auth_mode not in AUTH_MODES:
+            raise ValueError(f"Unknown auth mode {auth_mode!r}")
         self.host = host
         self._session = session
         self._password = password or ""
         self._timeout = timeout
         self._lock = asyncio.Lock()
         self.scheme: str | None = None  # "https" or "http" once one has worked
-        self.auth_mode: str = AUTH_STANDARD
+        self.auth_mode = auth_mode
+        self._warned_http = False
 
     # -- transport --
 
     async def _send(
-        self, scheme: str, method: str, path: str, body: bytes | None, auth: str | None
+        self, scheme: str, method: str, path: str, body: bytes | None
     ) -> tuple[int, str]:
         headers: dict[str, str] = {}
         if body is not None:
             headers["Content-Type"] = CONTENT_TYPE_JSON
-        if auth == AUTH_STANDARD:
+        if self.auth_mode == AUTH_STANDARD and self._password:
             headers |= sign_request(
                 method, path, self._password, body=body, content_type=CONTENT_TYPE_JSON
             )
-        elif auth == AUTH_BASIC:
+        elif self.auth_mode == AUTH_BASIC:
+            # Basic carries the password in recoverable form: https only, ever.
+            if scheme != "https":
+                raise AlgoConnectionError(f"{self.host}: Basic auth is only sent over https")
             headers |= basic_auth_header(self._password)
         async with self._session.request(
             method,
@@ -236,58 +249,59 @@ class AlgoClient:
             data=body,
             headers=headers,
             timeout=self._timeout,
-            ssl=False,  # LAN devices with self-signed certificates
+            # Each device has its own self-signed certificate and there is no CA to check it
+            # against, so verification is off (a known limit, see README).
+            ssl=False,
             allow_redirects=False,
         ) as resp:
             return resp.status, await resp.text()
 
-    async def _send_any_scheme(
-        self, method: str, path: str, body: bytes | None, auth: str | None
-    ) -> tuple[int, str]:
+    async def _send_any_scheme(self, method: str, path: str, body: bytes | None) -> tuple[int, str]:
         """Send over the remembered scheme, or https then http when none is known yet.
 
         Only a failure to connect moves on to http; any HTTP answer is the device's answer.
+        Basic auth never moves on to http.
         """
-        schemes = [self.scheme] if self.scheme else ["https", "http"]
+        if self.auth_mode == AUTH_BASIC:
+            schemes = ["https"]
+        else:
+            schemes = [self.scheme] if self.scheme else ["https", "http"]
         last_err: Exception | None = None
         for scheme in schemes:
             try:
-                result = await self._send(scheme, method, path, body, auth)
+                result = await self._send(scheme, method, path, body)
             except (aiohttp.ClientError, TimeoutError) as err:
                 last_err = err
                 continue
+            if scheme == "http" and not self._warned_http:
+                self._warned_http = True
+                _LOGGER.warning(
+                    "%s does not answer on https; using plain http (requests are %s)",
+                    self.host,
+                    "HMAC-signed" if self._password else "unauthenticated",
+                )
             self.scheme = scheme
             return result
         # Forget the scheme so the next attempt tries both again (the device may have changed).
         self.scheme = None
+        if self.auth_mode == AUTH_BASIC:
+            raise AlgoConnectionError(
+                f"{self.host}: cannot connect over https, and Basic auth is never sent over "
+                f"http ({last_err!r}). Enable https on the device or use Standard auth."
+            ) from last_err
         raise AlgoConnectionError(f"{self.host}: cannot connect ({last_err!r})") from last_err
 
     async def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
         """Send one request and return the parsed JSON body (None when empty)."""
         body = json.dumps(payload).encode() if payload is not None else None
         async with self._lock:
-            return await self._authed(method, path, body)
-
-    async def _authed(self, method: str, path: str, body: bytes | None) -> Any:
-        if not self._password:
-            status, text = await self._send_any_scheme(method, path, body, None)
-            if status in (401, 403):
-                raise AlgoAuthError(f"{self.host} wants a REST API password")
-            return self._result(method, path, status, text)
-
-        first = self.auth_mode
-        status, text = await self._send_any_scheme(method, path, body, first)
-        if status == 403 and first == AUTH_STANDARD:
-            # A device on Basic auth answers a signed request with the same bare 403.
-            status, text = await self._send_any_scheme(method, path, body, AUTH_BASIC)
-            if status not in (401, 403):
-                _LOGGER.debug("%s uses Basic auth", self.host)
-                self.auth_mode = AUTH_BASIC
+            status, text = await self._send_any_scheme(method, path, body)
         if status in (401, 403):
-            # Neither mode got in: re-detect from Standard next time (the password may change).
-            self.auth_mode = AUTH_STANDARD
+            if self.auth_mode == AUTH_NONE or not self._password:
+                raise AlgoAuthError(f"{self.host} wants a REST API password")
             raise AlgoAuthError(
-                f"{self.host} refused the REST API password (check it, and the device's NTP clock)"
+                f"{self.host} refused the REST API password with {self.auth_mode} auth "
+                "(check the password, the auth mode, and the device's NTP clock)"
             )
         return self._result(method, path, status, text)
 

@@ -6,11 +6,14 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 
 import aiohttp
 import pytest
 
 from custom_components.algo_speaker.api import (
+    AUTH_BASIC,
+    AUTH_NONE,
     AlgoAuthError,
     AlgoClient,
     AlgoConnectionError,
@@ -185,36 +188,85 @@ async def test_body_is_signed_exactly_as_sent() -> None:
     assert call.auth.startswith("hmac admin:")
 
 
-async def test_standard_403_retries_basic_and_remembers() -> None:
-    def handler(call: Call) -> tuple[int, str]:
-        if call.auth.startswith("hmac"):
-            return 403, ""
-        return _ok({"audio.page.vol": "-9dB"})
-
-    session = FakeSession(handler)
-    client = AlgoClient(session, "h", "letmein")  # type: ignore[arg-type]
-    assert await client.get_setting("audio.page.vol") == "-9dB"
-    basic = "Basic " + base64.b64encode(b"admin:letmein").decode()
-    assert [c.auth.split(" ")[0] for c in session.calls] == ["hmac", "Basic"]
-    assert session.calls[1].auth == basic
-    await client.get_setting("audio.page.vol")
-    assert session.calls[2].auth == basic, "Basic is remembered for this device"
+# --- auth modes (explicit; never guessed) ----------------------------------------------------
 
 
-async def test_403_after_basic_is_auth_error() -> None:
+async def test_standard_403_is_auth_error_without_basic_fallback() -> None:
     session = FakeSession(lambda c: (403, ""))
     client = AlgoClient(session, "h", "wrong")  # type: ignore[arg-type]
     with pytest.raises(AlgoAuthError):
         await client.get_about()
-    assert len(session.calls) == 2, "one Standard attempt, one Basic retry"
+    assert len(session.calls) == 1, "no automatic retry with Basic"
+    assert session.calls[0].auth.startswith("hmac admin:")
 
 
-async def test_basic_answer_that_is_not_auth_is_the_real_answer() -> None:
+async def test_standard_over_http_is_allowed_and_warned_once(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     def handler(call: Call) -> tuple[int, str]:
-        return (403, "") if call.auth.startswith("hmac") else (404, "")
+        if call.scheme == "https":
+            raise aiohttp.ClientConnectionError("refused")
+        return _ok({"mcast.mode": "2"})
 
-    client = AlgoClient(FakeSession(handler), "h", "pw")  # type: ignore[arg-type]
-    assert await client.get_about() is None, "404 on about = old firmware, not a bad password"
+    session = FakeSession(handler)
+    client = AlgoClient(session, "10.0.0.9", "pw")  # type: ignore[arg-type]
+    with caplog.at_level(logging.WARNING):
+        await client.get_setting("mcast.mode")
+        client.scheme = None  # force the fallback path a second time
+        await client.get_setting("mcast.mode")
+    http_calls = [c for c in session.calls if c.scheme == "http"]
+    assert http_calls and all(c.auth.startswith("hmac admin:") for c in http_calls)
+    warnings = [
+        r for r in caplog.records if r.levelno == logging.WARNING and "10.0.0.9" in r.message
+    ]
+    assert len(warnings) == 1, "warned once per device"
+    assert "pw" not in caplog.text
+
+
+async def test_basic_is_sent_over_https() -> None:
+    session = FakeSession(lambda c: _ok({"audio.page.vol": "-9dB"}))
+    client = AlgoClient(session, "h", "letmein", auth_mode=AUTH_BASIC)  # type: ignore[arg-type]
+    assert await client.get_setting("audio.page.vol") == "-9dB"
+    assert session.calls[0].scheme == "https"
+    assert session.calls[0].auth == "Basic " + base64.b64encode(b"admin:letmein").decode()
+
+
+async def test_basic_never_falls_back_to_http() -> None:
+    def handler(call: Call) -> tuple[int, str]:
+        if call.scheme == "https":
+            raise aiohttp.ClientConnectionError("refused")
+        return _ok({})
+
+    session = FakeSession(handler)
+    client = AlgoClient(session, "h", "letmein", auth_mode=AUTH_BASIC)  # type: ignore[arg-type]
+    with pytest.raises(AlgoConnectionError, match="never sent over http"):
+        await client.get_about()
+    assert [c.scheme for c in session.calls] == ["https"], "nothing sent over http"
+    # Even a remembered http scheme (e.g. from before a mode change) is not used.
+    client.scheme = "http"
+    with pytest.raises(AlgoConnectionError):
+        await client.get_about()
+    assert all(c.scheme == "https" for c in session.calls)
+
+
+async def test_basic_403_is_auth_error() -> None:
+    session = FakeSession(lambda c: (403, ""))
+    client = AlgoClient(session, "h", "wrong", auth_mode=AUTH_BASIC)  # type: ignore[arg-type]
+    with pytest.raises(AlgoAuthError):
+        await client.get_about()
+    assert len(session.calls) == 1
+
+
+async def test_none_mode_sends_no_authorization_even_with_password() -> None:
+    session = FakeSession(lambda c: _ok({"mcast.mode": "2"}))
+    client = AlgoClient(session, "h", "pw", auth_mode=AUTH_NONE)  # type: ignore[arg-type]
+    await client.get_setting("mcast.mode")
+    assert "Authorization" not in session.calls[0].headers
+
+
+def test_unknown_auth_mode_rejected() -> None:
+    with pytest.raises(ValueError):
+        AlgoClient(FakeSession(lambda c: (200, "")), "h", "pw", auth_mode="digest")  # type: ignore[arg-type]
 
 
 # --- device semantics ----------------------------------------------------------------------
