@@ -1,0 +1,38 @@
+# EXAMPLE ONLY: a Lovelace view for an 8301 radio and one speaker, using Mushroom cards
+# (install "Mushroom" from HACS first). Entity IDs come from your device names: replace
+# algo_8301_172_16_6_120 / algo_8410_172_16_6_131 with yours (Settings > Devices > Algo).
+title: Music
+path: music
+cards:
+  - type: vertical-stack
+    cards:
+      - type: custom:mushroom-title-card
+        title: House music
+        subtitle: 8301 internet radio, multicast zone 7
+      - type: custom:mushroom-entity-card
+        entity: switch.algo_8301_172_16_6_120_music
+        name: Music
+        icon: mdi:radio
+        tap_action:
+          action: toggle
+      - type: custom:mushroom-select-card
+        entity: select.algo_8301_172_16_6_120_station
+        name: Station
+        icon: mdi:playlist-music
+      - type: custom:mushroom-entity-card
+        entity: sensor.algo_8301_172_16_6_120_now_playing
+        name: Now playing
+        icon: mdi:music-note
+
+  - type: vertical-stack
+    cards:
+      - type: custom:mushroom-title-card
+        title: Volumes
+      - type: custom:mushroom-number-card
+        entity: number.algo_8410_172_16_6_131_music_page_volume
+        name: Display speaker (music/page)
+        display_mode: slider
+      - type: custom:mushroom-number-card
+        entity: number.algo_8410_172_16_6_131_ring_volume
+        name: Display speaker (ring)
+        display_mode: slider

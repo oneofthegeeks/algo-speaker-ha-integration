@@ -1,188 +1,107 @@
-# Algo Speaker Home Assistant Integration
+# Algo Speakers for Home Assistant
 
-[![CI](https://github.com/yourusername/algo-speaker-ha-integration/workflows/CI/badge.svg)](https://github.com/yourusername/algo-speaker-ha-integration/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-blue)](https://www.home-assistant.io/)
+A custom integration for [Algo](https://www.algosolutions.com/) IP speakers, paging adapters,
+displays and strobes, over their REST API. Set the volumes, play tones, flash the strobe, and
+run the 8301's internet radio (multicast to every speaker's music zone) from Home Assistant.
+Local polling, no cloud.
 
-This integration allows you to control Algo IP speakers (8180, 8189, 8188, 8196) from Home Assistant using their REST API with HMAC authentication.
+## Install (HACS)
 
-## 📋 Table of Contents
+1. HACS > three-dot menu > **Custom repositories** > add
+   `https://github.com/oneofthegeeks/algo-speaker-ha-integration`, category **Integration**.
+2. Install **Algo Speakers**, then restart Home Assistant.
+3. **Settings > Devices & services > Add integration > Algo Speakers.**
 
-- [Features](#-features)
-- [Supported Models](#-supported-algo-speaker-models)
-- [Prerequisites](#-prerequisites)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [API Endpoints](#-api-endpoints-used)
-- [Troubleshooting](#-troubleshooting)
-- [Contributing](#-contributing)
-- [License](#-license)
+## Setup
 
-## Features
+On each device, enable the REST API (Advanced Settings > Admin) and note its authentication
+mode. One integration entry covers every device that shares a password and mode:
 
-- **Audio Control**: Play tones, announcements, and custom audio files
-- **Strobe Lights**: Control strobe patterns and colors (if supported by your model)
-- **Volume Control**: Adjust speaker volume
-- **Multiple Alert Types**: Door bell, emergency alerts, page notifications, custom tones
-- **Secure Authentication**: HMAC-SHA256 authentication for API security
-- **Easy Configuration**: Simple setup with input controls and buttons
+| Field | What to enter |
+|---|---|
+| REST API password | The device's RESTful API password. Blank when its authentication is None. |
+| Authentication | **Standard** (HMAC signed, default), **Basic** (https only) or **None**: must match the device. |
+| Device addresses | IPs or hostnames, separated by commas or new lines. |
 
-## Supported Algo Speaker Models
+Each address is checked before the entry is created. Devices need a correct clock (NTP):
+Standard auth rejects requests more than about 30 seconds off.
 
-- **8180**: Basic IP speaker
-- **8188**: IP speaker with additional features  
-- **8189**: IP speaker with enhanced capabilities
-- **8196**: Advanced IP speaker with full feature set
+**Options** (the entry's Configure button): add or remove addresses, change the
+authentication mode, edit the radio stations (one `Name | URL` per line) and the poll
+interval (default 30 s). **Reconfigure** changes the password and addresses; a refused
+password starts a re-authentication prompt.
 
-## Prerequisites
+## Entities
 
-1. Algo speaker firmware version 3.3 or higher
-2. NTP enabled on the Algo device
-3. RESTful API enabled in Algo device settings
-4. Home Assistant Supervised installation
+| Entity | Models | What it does |
+|---|---|---|
+| Number "Music/page volume" | all (fw 5.x) | `audio.page.vol`: music, multicast and pages. 0 to -45 dB in 3 dB steps. |
+| Number "Ring volume" | all (fw 5.x) | `audio.ring.vol`: local tones and alerts. |
+| Button "Test tone" / "Stop tone" | all (fw 5.x) | Built-in test tone; stop any tone. |
+| Sensor "SIP registration" | all (fw 5.4+) | From the device status. |
+| Sensor "Multicast mode" | all | Sender/receiver and stream counts. |
+| Sensor "Firmware" (diagnostic) | all (fw 5.x) | Firmware version. |
+| Switch "Music" | 8301 | On plays the selected station; off stops. |
+| Select "Station" | 8301 | Choosing a station plays it at once. |
+| Sensor "Now playing" | 8301 | Station name, the raw URL if it isn't in your list, or "Stopped". |
+| Sensor "Radio status" | 8301 | The device's own "Internet Radio Streaming" status. |
+| Switch "Strobe" | 8128, 8138, 8190S, 8410, 8420 | Pattern 2, red, full brightness. |
+| Sensors "Music/page volume", "Ring volume" | old firmware (3.x) | Read-only, see Known limits. |
 
-## Installation
+An example dashboard (Mushroom cards) is in [`examples/dashboard.yaml`](examples/dashboard.yaml).
 
-### 1. Upload Python Scripts
+## Services
 
-Place the `algo_speaker_integration.py` file in your Home Assistant `python_scripts/` directory.
+Each takes `device_id` (one or more Algo devices).
 
-### 2. Update Configuration
+| Service | Fields |
+|---|---|
+| `algo_speaker.play_tone` | `file` (e.g. `chime.wav`), `loop`, optional `volume_db` (sets the ring volume first) |
+| `algo_speaker.stop_tone` | |
+| `algo_speaker.strobe_start` | `pattern` 0-15, `color1`, `color2`, `brightness` low/medium/high |
+| `algo_speaker.strobe_stop` | |
+| `algo_speaker.play_stream` | `url` (8301 only) |
+| `algo_speaker.stop_stream` | (8301 only) |
 
-Add the contents of `configuration.yaml` to your Home Assistant `configuration.yaml` file.
+```yaml
+action: algo_speaker.play_tone
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+  file: chime.wav
+  volume_db: -12
+```
 
-**Important**: Replace `YOUR_SPEAKER_IP` with your actual Algo speaker IP address in all REST command URLs.
+## How the music works
 
-### 3. Add Automations
+The 8301 pulls an internet stream and multicasts it on zone 7 ("Music", the lowest priority,
+so a page pauses it and it resumes). Speakers that listen on zone 7 play it at their page volume.
+This integration follows the same convention as an Algo 8450 console's buttons, so both can
+drive the same 8301:
 
-Add the contents of `automations.yaml` to your Home Assistant `automations.yaml` file.
+- **Play:** `radio.use = "1"`, `radio.url = <stream>`, `radio.fn = ""` (an offline file would
+  win when the stream fails), `radio.zone = "7"`.
+- **Stop:** `radio.url = ""`. `radio.use` stays `"1"`.
+- Music is on when `radio.use` is `"1"` and `radio.url` is set.
 
-### 4. Create Dashboard (Optional)
+Because Stop clears the URL, the Music switch remembers the last station it saw playing and
+plays that when turned back on (the first station in your list after a restart).
 
-Add the Lovelace dashboard configuration to create a dedicated control panel for your Algo speakers.
+## Known limits
 
-## Configuration
+- **Old firmware (3.x) is read-only.** It has no `/api/info/about` and refuses settings
+  writes. Its volumes and multicast mode show as sensors, and a repair issue says why.
+- **Strobe state is assumed.** The device can't report it, so the switch shows the last command
+  Home Assistant sent.
+- **TLS certificates are not verified.** Each device has its own self-signed certificate
+  and there is no CA to check it against. https still keeps the traffic private on the LAN,
+  but it does not prove the device is the one you meant.
+- **Basic authentication is only sent over https.** It carries the password in recoverable
+  form. A device that answers only on http needs Standard auth (HMAC, which never reveals the
+  password) or None. Standard and None fall back to http when https can't connect, with a
+  warning in the log.
+- Devices answer one request at a time (~300 ms each), so a poll takes a second or two per
+  device. Keep the poll interval at 10 s or more.
 
-### Basic Setup
+## Development
 
-1. **Get Speaker IP**: Find your Algo speaker's IP address from your router or Algo device settings
-2. **Update IP Address**: Replace `YOUR_SPEAKER_IP` in all configuration files
-3. **Set API Password**: The default password is "algo" - change this in the Algo device settings
-4. **Upload Audio Files**: Upload your desired audio files to the Algo speaker
-
-### Audio Files
-
-Upload these audio files to your Algo speaker:
-- `door-bell.wav`
-- `emergency-alert.wav` 
-- `page-notif.wav`
-- `test-tone-1.wav`
-- `test-tone-2.wav`
-
-### API Authentication
-
-The integration uses HMAC-SHA256 authentication. The Python script automatically generates the required authentication headers for each API call.
-
-## Usage
-
-### Manual Control
-
-1. **Trigger Alert**: Use the "Trigger Alert" button to play the selected alert type
-2. **Stop Alert**: Use the "Stop Alert" button to stop all current alerts
-3. **Quick Actions**: Use the quick action buttons for common alert types
-4. **Volume Control**: Adjust volume using the volume slider
-5. **Strobe Control**: Configure strobe patterns, colors, and brightness
-
-### Automation Examples
-
-The integration includes several example automations:
-
-- **Door Sensor**: Trigger door bell when door opens
-- **Motion Sensor**: Play notification when motion detected
-- **Time-based**: Daily announcements at specific times
-- **Emergency**: Automatic emergency alerts from smoke detectors, water leaks, etc.
-
-### Custom Alerts
-
-You can create custom alert types by:
-
-1. Adding new scripts in `configuration.yaml`
-2. Creating new automations in `automations.yaml`
-3. Using the custom tone input for specific audio files
-
-## API Endpoints Used
-
-- `GET /api/settings/device.info` - Device information
-- `GET /api/settings/audio.page.vol` - Current volume
-- `PUT /api/settings/audio.page.vol` - Set volume
-- `POST /api/controls/tone/start` - Play tone
-- `POST /api/controls/tone/stop` - Stop tone
-- `POST /api/controls/strobe/start` - Start strobe
-- `POST /api/controls/strobe/stop` - Stop strobe
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Connection Failed**: Check IP address and network connectivity
-2. **Authentication Error**: Verify API password and time synchronization
-3. **Audio Not Playing**: Check audio file exists on speaker and volume is set
-4. **Strobe Not Working**: Verify your speaker model supports strobe lights
-
-### Debug Steps
-
-1. Check Home Assistant logs for REST command errors
-2. Verify Algo speaker is accessible via web interface
-3. Test API calls manually using the Python script
-4. Ensure NTP is enabled on the Algo device
-
-### Logs
-
-Check these logs for troubleshooting:
-- Home Assistant logs: `Configuration > Logs`
-- Algo speaker logs: Device web interface > Logs
-
-## Security Notes
-
-- Change the default API password from "algo"
-- Use HTTPS if possible (requires certificate setup)
-- Consider network segmentation for security
-- Regularly update Algo speaker firmware
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For issues with:
-- **Home Assistant**: Check [Home Assistant community forums](https://community.home-assistant.io/)
-- **Algo Speakers**: Contact [Algo support](mailto:support@algosolutions.com)
-- **This Integration**: 
-  - Check the [Issues](https://github.com/yourusername/algo-speaker-ha-integration/issues) section
-  - Review the configuration files and logs
-  - Create a new issue with detailed information
-
-## 📚 Additional Resources
-
-- [Algo Solutions Documentation](https://docs.algosolutions.com/)
-- [Home Assistant RESTful Command Documentation](https://www.home-assistant.io/integrations/rest_command/)
-- [Home Assistant REST Sensor Documentation](https://www.home-assistant.io/integrations/rest/)
-
-## ⭐ Star this Repository
-
-If you find this integration useful, please consider giving it a star on GitHub!
+See [CLAUDE.md](CLAUDE.md) for the layout and test commands.
