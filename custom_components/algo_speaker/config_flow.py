@@ -190,6 +190,10 @@ class AlgoConfigFlow(ConfigFlow, domain=DOMAIN):
                 devices, errors, placeholders = await async_validate_hosts(
                     self.hass, password, auth_mode, entry.data[CONF_HOSTS]
                 )
+                # A device that happens to be unplugged must not block a password change:
+                # accept once at least one host took the password and none refused it.
+                if errors.get("base") == "cannot_connect" and devices:
+                    errors = {}
             if not errors:
                 return self.async_update_reload_and_abort(
                     entry,

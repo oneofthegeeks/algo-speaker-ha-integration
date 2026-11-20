@@ -157,6 +157,34 @@ async def test_reauth(hass: HomeAssistant) -> None:
     assert entry.data[CONF_PASSWORD] == "new-pw"
 
 
+async def test_reauth_with_one_host_offline(hass: HomeAssistant) -> None:
+    entry = _entry(hass)
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, CONF_HOSTS: [HOST_8301, HOST_8410]}
+    )
+    fleet = Fleet({HOST_8301: make_8301(), HOST_8410: make_8410()}, password="new-pw")
+    fleet.offline.add(HOST_8410)
+    with fleet.patched():
+        result = await entry.start_reauth_flow(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_PASSWORD: "new-pw"}
+        )
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_PASSWORD] == "new-pw"
+
+
+async def test_reauth_all_offline_is_cannot_connect(hass: HomeAssistant) -> None:
+    entry = _entry(hass)
+    fleet = Fleet({HOST_8301: make_8301()})
+    fleet.offline.add(HOST_8301)
+    with fleet.patched():
+        result = await entry.start_reauth_flow(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_PASSWORD: "x"}
+        )
+    assert result["errors"] == {"base": "cannot_connect"}
+
+
 async def test_reconfigure(hass: HomeAssistant) -> None:
     entry = _entry(hass)
     fleet = Fleet({HOST_8301: make_8301(), HOST_8410: make_8410()})
