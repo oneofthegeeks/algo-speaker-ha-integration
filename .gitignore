@@ -95,3 +95,4 @@ htmlcov/
 *.tar.gz
 *.rar
 
+.ruff_cache/
