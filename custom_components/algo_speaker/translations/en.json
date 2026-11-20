@@ -1,0 +1,278 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Algo speakers",
+        "description": "All the devices in this group share one REST API password and authentication mode. Leave the password blank for devices whose API authentication is set to None.",
+        "data": {
+          "password": "REST API password",
+          "auth_mode": "Authentication",
+          "hosts": "Device addresses"
+        },
+        "data_description": {
+          "password": "The RESTful API password set on each device (Advanced Settings > Admin).",
+          "hosts": "IP addresses or hostnames, separated by commas or new lines.",
+          "auth_mode": "Must match each device's API authentication setting (Advanced Settings > Admin). Basic is only ever sent over https."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Algo REST API password",
+        "description": "The devices refused the stored REST API password. Enter the current one.",
+        "data": {
+          "password": "REST API password"
+        }
+      },
+      "reconfigure": {
+        "title": "Algo speakers",
+        "description": "Change the shared REST API password or the device addresses.",
+        "data": {
+          "password": "REST API password",
+          "auth_mode": "Authentication",
+          "hosts": "Device addresses"
+        },
+        "data_description": {
+          "password": "Leave blank for devices whose API authentication is set to None.",
+          "hosts": "IP addresses or hostnames, separated by commas or new lines.",
+          "auth_mode": "Must match each device's API authentication setting (Advanced Settings > Admin). Basic is only ever sent over https."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to: {hosts}",
+      "cannot_connect_basic": "Could not connect over https to: {hosts}. Basic authentication is never sent over plain http; enable https on the device or use Standard.",
+      "invalid_auth": "The REST API password was refused by: {hosts}. Check the password, the authentication mode, and that the device's clock is right (NTP).",
+      "no_hosts": "Enter at least one device address.",
+      "password_required": "Basic authentication needs a password."
+    },
+    "abort": {
+      "already_configured": "These devices are already set up.",
+      "reauth_successful": "The password was updated.",
+      "reconfigure_successful": "The devices were updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Algo speakers",
+        "data": {
+          "hosts": "Device addresses",
+          "auth_mode": "Authentication",
+          "stations": "Radio stations (8301)",
+          "scan_interval": "Poll interval"
+        },
+        "data_description": {
+          "hosts": "Add or remove addresses, separated by commas or new lines. New ones are checked with the stored password.",
+          "stations": "One station per line, as: Name | URL",
+          "scan_interval": "How often each device is read, in seconds.",
+          "auth_mode": "Changing it re-checks every device. Basic is only ever sent over https."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to: {hosts}",
+      "cannot_connect_basic": "Could not connect over https to: {hosts}. Basic authentication is never sent over plain http; enable https on the device or use Standard.",
+      "invalid_auth": "The REST API password was refused by: {hosts}. Check the password, the authentication mode, and that the device's clock is right (NTP).",
+      "no_hosts": "Enter at least one device address.",
+      "password_required": "Basic authentication needs a password.",
+      "invalid_station": "Not a \"Name | URL\" line with an http(s) address and a name used once: {line}"
+    }
+  },
+  "entity": {
+    "number": {
+      "page_volume": {
+        "name": "Music/page volume"
+      },
+      "ring_volume": {
+        "name": "Ring volume"
+      }
+    },
+    "button": {
+      "test_tone": {
+        "name": "Test tone"
+      },
+      "stop_tone": {
+        "name": "Stop tone"
+      }
+    },
+    "switch": {
+      "music": {
+        "name": "Music"
+      },
+      "strobe": {
+        "name": "Strobe"
+      }
+    },
+    "select": {
+      "station": {
+        "name": "Station"
+      }
+    },
+    "sensor": {
+      "sip_registration": {
+        "name": "SIP registration"
+      },
+      "multicast_mode": {
+        "name": "Multicast mode"
+      },
+      "firmware": {
+        "name": "Firmware"
+      },
+      "now_playing": {
+        "name": "Now playing"
+      },
+      "radio_status": {
+        "name": "Radio status"
+      },
+      "page_volume": {
+        "name": "Music/page volume"
+      },
+      "ring_volume": {
+        "name": "Ring volume"
+      }
+    }
+  },
+  "issues": {
+    "firmware_read_only": {
+      "title": "Algo device at {host} is read-only",
+      "description": "The device at {host} runs firmware too old for control (it has no /api/info/about and refuses settings writes). Its volumes and multicast mode are shown as sensors only. Update its firmware to 5.x to control it."
+    }
+  },
+  "services": {
+    "play_tone": {
+      "name": "Play tone",
+      "description": "Plays a tone file stored on the device.",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "The Algo devices to play on."
+        },
+        "file": {
+          "name": "File",
+          "description": "Tone file name on the device, for example chime.wav."
+        },
+        "loop": {
+          "name": "Loop",
+          "description": "Repeat until stopped."
+        },
+        "volume_db": {
+          "name": "Volume",
+          "description": "Sets the ring volume (used for local tones) first, 0 to -45 dB in 3 dB steps."
+        }
+      }
+    },
+    "stop_tone": {
+      "name": "Stop tone",
+      "description": "Stops the tone playing on the device.",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "The Algo devices to stop."
+        }
+      }
+    },
+    "strobe_start": {
+      "name": "Start strobe",
+      "description": "Starts the strobe on devices that have one (8128, 8138, 8190S, 8410, 8420).",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "The Algo devices to flash."
+        },
+        "pattern": {
+          "name": "Pattern",
+          "description": "Strobe pattern number, 0 to 15 (model specific)."
+        },
+        "color1": {
+          "name": "Color",
+          "description": "First color."
+        },
+        "color2": {
+          "name": "Second color",
+          "description": "Second color; defaults to the first."
+        },
+        "brightness": {
+          "name": "Brightness",
+          "description": "Strobe brightness."
+        }
+      }
+    },
+    "strobe_stop": {
+      "name": "Stop strobe",
+      "description": "Stops the strobe.",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "The Algo devices to stop."
+        }
+      }
+    },
+    "play_stream": {
+      "name": "Play stream",
+      "description": "Plays an internet radio stream on an 8301 and multicasts it to the music zone (7).",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "The 8301 devices to play on."
+        },
+        "url": {
+          "name": "URL",
+          "description": "Stream address, http:// or https://."
+        }
+      }
+    },
+    "stop_stream": {
+      "name": "Stop stream",
+      "description": "Stops the 8301's internet radio by clearing its stream address.",
+      "fields": {
+        "device_id": {
+          "name": "Devices",
+          "description": "The 8301 devices to stop."
+        }
+      }
+    }
+  },
+  "selector": {
+    "auth_mode": {
+      "options": {
+        "standard": "Standard (HMAC signed)",
+        "basic": "Basic (https only)",
+        "none": "None"
+      }
+    },
+    "strobe_color": {
+      "options": {
+        "red": "Red",
+        "blue": "Blue",
+        "green": "Green",
+        "amber": "Amber"
+      }
+    },
+    "strobe_brightness": {
+      "options": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      }
+    }
+  },
+  "exceptions": {
+    "not_algo_device": {
+      "message": "{device} is not a loaded Algo device."
+    },
+    "read_only": {
+      "message": "{device} runs firmware too old for control."
+    },
+    "no_strobe": {
+      "message": "{device} has no strobe light."
+    },
+    "not_8301": {
+      "message": "{device} is not an 8301; only the 8301 streams internet radio."
+    },
+    "invalid_url": {
+      "message": "The stream address must start with http:// or https://."
+    },
+    "device_error": {
+      "message": "{device}: {error}"
+    }
+  }
+}

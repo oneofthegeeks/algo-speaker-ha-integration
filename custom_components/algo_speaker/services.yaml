@@ -1,0 +1,112 @@
+play_tone:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: algo_speaker
+          multiple: true
+    file:
+      required: true
+      example: chime.wav
+      selector:
+        text:
+    loop:
+      default: false
+      selector:
+        boolean:
+    volume_db:
+      selector:
+        number:
+          min: -45
+          max: 0
+          step: 3
+          unit_of_measurement: dB
+          mode: slider
+
+stop_tone:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: algo_speaker
+          multiple: true
+
+strobe_start:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: algo_speaker
+          multiple: true
+    pattern:
+      default: 2
+      selector:
+        number:
+          min: 0
+          max: 15
+          step: 1
+          mode: box
+    color1:
+      default: red
+      selector:
+        select:
+          translation_key: strobe_color
+          options:
+            - red
+            - blue
+            - green
+            - amber
+    color2:
+      selector:
+        select:
+          translation_key: strobe_color
+          options:
+            - red
+            - blue
+            - green
+            - amber
+    brightness:
+      default: high
+      selector:
+        select:
+          translation_key: strobe_brightness
+          options:
+            - low
+            - medium
+            - high
+
+strobe_stop:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: algo_speaker
+          multiple: true
+
+play_stream:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: algo_speaker
+          multiple: true
+    url:
+      required: true
+      example: https://ice5.somafm.com/groovesalad-128-aac
+      selector:
+        text:
+          type: url
+
+stop_stream:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: algo_speaker
+          multiple: true
