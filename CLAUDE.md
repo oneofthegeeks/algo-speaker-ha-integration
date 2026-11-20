@@ -1,6 +1,6 @@
 # algo-speaker-ha-integration
 
-Live: none yet (1.0.0 on branch `v1-integration`, not released).
+Live: v1.0.0 (2026-11-20) — first HACS release; installed on Taylor's Home Assistant for the house Algo devices.
 
 ## What This Is
 Home Assistant custom integration (domain `algo_speaker`, HACS) for Taylor's Algo IP speakers,
