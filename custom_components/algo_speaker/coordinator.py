@@ -14,6 +14,7 @@ from homeassistant.helpers.device_registry import (
     DeviceInfo,
     format_mac,
 )
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import AlgoAuthError, AlgoClient, AlgoError, DeviceIdentity
@@ -73,6 +74,19 @@ class AlgoCoordinator(DataUpdateCoordinator[AlgoData]):
         self.last_station_url: str | None = None
         # The strobe's state can't be read back from the device; it is what was last sent.
         self.strobe_on = False
+
+    # The 8301 takes a few seconds to report a stream change in /api/info/status, so a refresh
+    # straight after play/stop reads the old "Radio status". Refresh now and once more later.
+    STREAM_SETTLE_SECONDS = 6
+
+    async def async_refresh_after_stream_change(self) -> None:
+        """Refresh now, then again once the 8301 has had time to update its status."""
+        await self.async_request_refresh()
+
+        async def _again(_now: Any) -> None:
+            await self.async_request_refresh()
+
+        async_call_later(self.hass, self.STREAM_SETTLE_SECONDS, _again)
 
     # -- what the device is --
 

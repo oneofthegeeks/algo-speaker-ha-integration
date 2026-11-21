@@ -177,7 +177,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             await device_call(c.host, c.client.play_stream(url))
             c.last_station_url = url
             c.patch_settings({KEY_RADIO_URL: url})
-            await c.async_request_refresh()
+            await c.async_refresh_after_stream_change()
 
         await _each(radios(call), run)
 
@@ -185,7 +185,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         async def run(c: AlgoCoordinator) -> None:
             await device_call(c.host, c.client.stop_stream())
             c.patch_settings({KEY_RADIO_URL: ""})
-            await c.async_request_refresh()
+            await c.async_refresh_after_stream_change()
 
         await _each(radios(call), run)
 

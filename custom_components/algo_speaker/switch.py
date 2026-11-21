@@ -62,13 +62,13 @@ class AlgoMusicSwitch(AlgoEntity, SwitchEntity):
         await self._device_call(self.coordinator.client.play_stream(url))
         self.coordinator.last_station_url = url
         self.coordinator.patch_settings({KEY_RADIO_URL: url})
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh_after_stream_change()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """STOP."""
         await self._device_call(self.coordinator.client.stop_stream())
         self.coordinator.patch_settings({KEY_RADIO_URL: ""})
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh_after_stream_change()
 
 
 class AlgoStrobeSwitch(AlgoEntity, SwitchEntity):

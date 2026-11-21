@@ -53,4 +53,4 @@ class AlgoStationSelect(AlgoEntity, SelectEntity):
         await self._device_call(self.coordinator.client.play_stream(url))
         self.coordinator.last_station_url = url
         self.coordinator.patch_settings({KEY_RADIO_URL: url})
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh_after_stream_change()
