@@ -305,11 +305,8 @@ def test_parse_hosts() -> None:
 
 def test_parse_default_stations() -> None:
     stations = parse_stations(DEFAULT_STATIONS)
-    assert len(stations) == 8
-    assert stations[0] == (
-        "WCBS 101.1",
-        "https://live.amperwave.net/manifest/audacy-wcbsfmaac-hlsc.m3u8",
-    )
+    assert len(stations) == 7
+    assert stations[0] == ("Groove Salad", "https://ice5.somafm.com/groovesalad-128-aac")
     assert stations[-1] == ("Doomed", "https://ice5.somafm.com/doomed-128-aac")
 
 

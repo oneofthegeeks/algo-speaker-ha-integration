@@ -30,10 +30,10 @@ LUSH = "https://ice5.somafm.com/lush-128-aac"
 DOOMED = "https://ice5.somafm.com/doomed-128-aac"
 STATIONS = f"Lush | {LUSH}\nDoomed | {DOOMED}"
 
-# entity_ids follow the device names "Algo 8301 172.16.6.120" etc.
-E_8301 = "algo_8301_172_16_6_120"
-E_8410 = "algo_8410_172_16_6_131"
-E_OLD = "algo_172_16_6_55"
+# entity_ids follow the device names "Algo 8301 192.0.2.20" etc.
+E_8301 = "algo_8301_192_0_2_20"
+E_8410 = "algo_8410_192_0_2_31"
+E_OLD = "algo_192_0_2_55"
 
 
 @pytest.fixture

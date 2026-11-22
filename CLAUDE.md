@@ -1,6 +1,6 @@
 # algo-speaker-ha-integration
 
-Live: v2.0.1 (2026-11-21) — installed on Taylor's Home Assistant for the house Algo devices.
+Live: v2.0.2 (2026-11-22) — public-ready release (SomaFM default stations, issue forms, SECURITY.md); installed on Taylor's Home Assistant.
 
 ## What This Is
 Home Assistant custom integration (domain `algo_speaker`, HACS) for Taylor's Algo IP speakers,
@@ -51,6 +51,8 @@ release as an update. CI: `ci.yml` (ruff + pytest), `validate.yml` (hassfest + H
 - `number.py`, `switch.py`, `select.py`, `sensor.py`, `button.py`: entities.
 - `strings.json` = `translations/en.json` (keep them identical).
 - `examples/dashboard.yaml`: example Mushroom view.
+- Public repo (someone starred it 2026-11-22): keep home addresses, names and stations out of
+  code, tests and examples; use 192.0.2.x (RFC 5737) in tests. Issue forms in `.github/ISSUE_TEMPLATE/`.
 
 ## Gotchas
 - **Tests pin HA 2026.2.3** (`pytest-homeassistant-custom-component==0.13.316`): the last

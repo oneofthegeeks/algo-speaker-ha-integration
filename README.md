@@ -1,5 +1,11 @@
 # Algo Speakers for Home Assistant
 
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
+[![Validate](https://github.com/oneofthegeeks/algo-speaker-ha-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/oneofthegeeks/algo-speaker-ha-integration/actions/workflows/validate.yml)
+[![CI](https://github.com/oneofthegeeks/algo-speaker-ha-integration/actions/workflows/ci.yml/badge.svg)](https://github.com/oneofthegeeks/algo-speaker-ha-integration/actions/workflows/ci.yml)
+
+Not affiliated with or endorsed by Algo Communication Products.
+
 A custom integration for [Algo](https://www.algosolutions.com/) IP speakers, paging adapters,
 displays and strobes, over their REST API. Set the volumes, play tones, flash the strobe, and
 run the 8301's internet radio (multicast to every speaker's music zone) from Home Assistant.
@@ -30,6 +36,18 @@ Standard auth rejects requests more than about 30 seconds off.
 authentication mode, edit the radio stations (one `Name | URL` per line) and the poll
 interval (default 30 s). **Reconfigure** changes the password and addresses; a refused
 password starts a re-authentication prompt.
+
+## Tested with
+
+| Device | Firmware | Notes |
+|---|---|---|
+| 8301 Paging Adapter | 5.7 | Internet radio sender (Music switch, Station select). |
+| 8410 Display Speaker | 5.7 | Volumes, tones, strobe. |
+| 8188 Ceiling Speaker | 5.7.2 | Volumes, tones. |
+| Any model | 3.x | Read-only (see Known limits). |
+
+Home Assistant 2025.8 or newer. Other Algo models on firmware 5.x use the same API and should
+work; if you try one, an issue saying how it went is welcome.
 
 ## Entities
 
@@ -102,6 +120,19 @@ plays that when turned back on (the first station in your list after a restart).
 - Devices answer one request at a time (~300 ms each), so a poll takes a second or two per
   device. Keep the poll interval at 10 s or more.
 
-## Development
+## Troubleshooting
 
-See [CLAUDE.md](CLAUDE.md) for the layout and test commands.
+- **"Cannot connect" when adding a device:** check the REST API is enabled on it (Advanced
+  Settings > Admin) and that Home Assistant can reach its address.
+- **"Invalid authentication" with the right password:** the authentication mode must match the
+  device's own setting, and Standard needs the device's clock within about 30 s of real time
+  (set an NTP server on the device).
+- **Music switch is on but nothing plays:** the speakers must listen on multicast zone 7 (each
+  receiver's Multicast settings), and the stream URL must play in a normal media player.
+- **Reporting a problem:** open an issue with your Home Assistant version, the Algo model and
+  firmware, and the integration's diagnostics (device page > Download diagnostics; the password
+  and SIP details are redacted).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security problems: [SECURITY.md](SECURITY.md).

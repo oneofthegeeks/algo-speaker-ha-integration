@@ -1,7 +1,7 @@
 # Tooling only: the integration itself is installed by HACS from custom_components/.
 [project]
 name = "algo-speaker-ha-integration"
-version = "1.0.0"
+version = "2.0.2"
 requires-python = ">=3.13"
 
 [tool.pytest.ini_options]

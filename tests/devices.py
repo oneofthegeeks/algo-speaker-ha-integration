@@ -17,9 +17,9 @@ from custom_components.algo_speaker.api import hmac_digest, signing_message
 
 from .fake_session import Call, FakeSession
 
-HOST_8301 = "172.16.6.120"
-HOST_8410 = "172.16.6.131"
-HOST_OLD = "172.16.6.55"
+HOST_8301 = "192.0.2.20"
+HOST_8410 = "192.0.2.31"
+HOST_OLD = "192.0.2.55"
 PASSWORD = "secret"
 
 

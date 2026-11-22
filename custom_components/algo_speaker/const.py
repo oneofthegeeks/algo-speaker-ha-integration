@@ -52,11 +52,11 @@ STROBE_BRIGHTNESS_8190S: Final = {"low": 1, "medium": 2, "high": 3}
 STROBE_DEFAULT_PATTERN: Final = 2
 STROBE_DEFAULT_COLOR: Final = "red"
 
-# The house convention, shared with the Algo 8450 console's buttons.
-DEFAULT_STATIONS: Final = """WCBS 101.1 | https://live.amperwave.net/manifest/audacy-wcbsfmaac-hlsc.m3u8
-WBAB 102.3 | https://sim-im-cmg.streamguys1.com/lon1023/lon1023-sgplayer-aac
-WKTU 103.5 | https://stream.revma.ihrhls.com/zc1473/hls.m3u8
-Groove Salad | https://ice5.somafm.com/groovesalad-128-aac
+# Starter list for a new entry (edit it in the entry's options). SomaFM: listener-supported,
+# no ads, stable URLs that work in any region.
+DEFAULT_STATIONS: Final = """Groove Salad | https://ice5.somafm.com/groovesalad-128-aac
+Beat Blender | https://ice5.somafm.com/beatblender-128-aac
+Fluid | https://ice5.somafm.com/fluid-128-aac
 Drone Zone | https://ice2.somafm.com/dronezone-128-aac
 Secret Agent | https://ice5.somafm.com/secretagent-128-aac
 Lush | https://ice5.somafm.com/lush-128-aac

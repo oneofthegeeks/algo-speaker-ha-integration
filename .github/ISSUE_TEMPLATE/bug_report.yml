@@ -1,0 +1,47 @@
+name: Bug report
+description: Something doesn't work as described in the README
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Never paste a device password. The diagnostics download already redacts it.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.11.2"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      placeholder: "2.0.2"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Algo model(s) and firmware
+      placeholder: "8301 fw 5.7, 8188 fw 5.7.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Authentication mode
+      options: [Standard, Basic, None]
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics and logs
+      description: Device page > Download diagnostics, plus any log lines from custom_components.algo_speaker.
+      render: text

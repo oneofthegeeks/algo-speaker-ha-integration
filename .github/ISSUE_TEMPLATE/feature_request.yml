@@ -1,0 +1,18 @@
+name: Feature request
+description: A setting, model or action you'd like supported
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like to do from Home Assistant?
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Algo model(s) and firmware
+  - type: textarea
+    id: api
+    attributes:
+      label: The Algo API setting or endpoint, if you know it
