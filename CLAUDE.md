@@ -1,6 +1,6 @@
 # algo-speaker-ha-integration
 
-Live: v2.0.2 (2026-11-22) — public-ready release (SomaFM default stations, issue forms, SECURITY.md); installed on the maintainer's Home Assistant.
+Live: v2.0.3 (2026-11-22) — a single refused request no longer starts re-authentication (signed again once; reauth after three refused polls); installed on the maintainer's Home Assistant.
 
 ## What This Is
 Home Assistant custom integration (domain `algo_speaker`, HACS) for Algo IP speakers,
@@ -61,6 +61,9 @@ release as an update. CI: `ci.yml` (ruff + pytest), `validate.yml` (hassfest + H
   Python 3.14 would unlock the current test package.
 - **Auth mode is explicit** (security review, 2026-11-20): no Standard to Basic fallback.
   Basic is never sent over http; Standard/None fall back to http, warned once per device.
+- **A lone 403 is not a wrong password**: an 8301 refuses about one good request in several
+  hundred. `request` signs a refused Standard request again once; the coordinator raises
+  `ConfigEntryAuthFailed` (which stops polling) only after three refused polls in a row.
 - **TLS verification is off** (`ssl=False`): per-device self-signed certs, no CA.
 - **Devices are single-threaded** (~300 ms a request): each `AlgoClient` holds a lock; never
   fire parallel requests at one device.

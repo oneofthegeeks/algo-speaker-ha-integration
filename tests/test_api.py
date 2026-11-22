@@ -196,8 +196,18 @@ async def test_standard_403_is_auth_error_without_basic_fallback() -> None:
     client = AlgoClient(session, "h", "wrong")  # type: ignore[arg-type]
     with pytest.raises(AlgoAuthError):
         await client.get_about()
-    assert len(session.calls) == 1, "no automatic retry with Basic"
-    assert session.calls[0].auth.startswith("hmac admin:")
+    assert len(session.calls) == 2, "signed again once, then given up"
+    assert all(c.auth.startswith("hmac admin:") for c in session.calls), "never Basic"
+
+
+async def test_standard_refused_once_is_signed_again() -> None:
+    """A device sometimes refuses one good request; the second, freshly signed, goes through."""
+    answers = [(403, ""), (200, json.dumps({"Product Name": "Algo 8301"}))]
+    session = FakeSession(lambda c: answers.pop(0))
+    client = AlgoClient(session, "h", "pw")  # type: ignore[arg-type]
+    assert await client.get_about() == {"Product Name": "Algo 8301"}
+    first, second = session.calls
+    assert first.auth != second.auth, "new nonce, so a new signature"
 
 
 async def test_standard_over_http_is_allowed_and_warned_once(

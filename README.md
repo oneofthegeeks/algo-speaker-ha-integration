@@ -127,6 +127,9 @@ plays that when turned back on (the first station in your list after a restart).
 - **"Invalid authentication" with the right password:** the authentication mode must match the
   device's own setting, and Standard needs the device's clock within about 30 s of real time
   (set an NTP server on the device).
+- **"Authentication expired" now and then, on one device:** fixed in 2.0.3. Some devices
+  refuse an occasional good request; the integration now signs it again and only asks for
+  the password after three refused polls in a row.
 - **Music switch is on but nothing plays:** the speakers must listen on multicast zone 7 (each
   receiver's Multicast settings), and the stream URL must play in a normal media player.
 - **Reporting a problem:** open an issue with your Home Assistant version, the Algo model and

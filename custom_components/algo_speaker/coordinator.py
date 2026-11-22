@@ -74,6 +74,10 @@ class AlgoCoordinator(DataUpdateCoordinator[AlgoData]):
         self.last_station_url: str | None = None
         # The strobe's state can't be read back from the device; it is what was last sent.
         self.strobe_on = False
+        self._auth_failures = 0  # polls in a row the device refused the password
+
+    # Polls in a row that must be refused before asking for the password again.
+    AUTH_FAILURES_BEFORE_REAUTH = 3
 
     # The 8301 takes a few seconds to report a stream change in /api/info/status, so a refresh
     # straight after play/stop reads the old "Radio status". Refresh now and once more later.
@@ -151,9 +155,16 @@ class AlgoCoordinator(DataUpdateCoordinator[AlgoData]):
             status = {} if self.read_only else await self.client.get_status()
             settings = await self.client.get_settings(self.setting_keys)
         except AlgoAuthError as err:
-            raise ConfigEntryAuthFailed(str(err)) from err
+            # ConfigEntryAuthFailed stops polling until someone re-enters the password, so
+            # only raise it once the device has refused several polls in a row. A one-off
+            # refusal is an ordinary failed poll that the next one recovers from.
+            self._auth_failures += 1
+            if self._auth_failures >= self.AUTH_FAILURES_BEFORE_REAUTH:
+                raise ConfigEntryAuthFailed(str(err)) from err
+            raise UpdateFailed(str(err)) from err
         except AlgoError as err:
             raise UpdateFailed(str(err)) from err
+        self._auth_failures = 0
         data = AlgoData(settings=settings, status=status)
         if self.music_on(data):
             self.last_station_url = settings.get(KEY_RADIO_URL)
