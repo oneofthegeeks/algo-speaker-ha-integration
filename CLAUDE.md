@@ -1,9 +1,9 @@
 # algo-speaker-ha-integration
 
-Live: v2.0.2 (2026-11-22) — public-ready release (SomaFM default stations, issue forms, SECURITY.md); installed on Taylor's Home Assistant.
+Live: v2.0.2 (2026-11-22) — public-ready release (SomaFM default stations, issue forms, SECURITY.md); installed on the maintainer's Home Assistant.
 
 ## What This Is
-Home Assistant custom integration (domain `algo_speaker`, HACS) for Taylor's Algo IP speakers,
+Home Assistant custom integration (domain `algo_speaker`, HACS) for Algo IP speakers,
 paging adapters and strobes: volumes, tones, strobe, and the 8301's internet radio. Public repo.
 
 ## Stack
@@ -56,7 +56,7 @@ release as an update. CI: `ci.yml` (ruff + pytest), `validate.yml` (hassfest + H
 
 ## Gotchas
 - **Tests pin HA 2026.2.3** (`pytest-homeassistant-custom-component==0.13.316`): the last
-  release on Python 3.13. Taylor's HA (2026.11) runs Python 3.14, so API changes after
+  release on Python 3.13. Current HA (2026.11) runs Python 3.14, so API changes after
   February are only caught by hassfest (which runs current HA) and real use. Moving CI to
   Python 3.14 would unlock the current test package.
 - **Auth mode is explicit** (security review, 2026-11-20): no Standard to Basic fallback.
