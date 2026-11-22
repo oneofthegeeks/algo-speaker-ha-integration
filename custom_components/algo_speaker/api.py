@@ -51,6 +51,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=10, connect=5)
 CONTENT_TYPE_JSON = "application/json"
+AUTH_RETRY_DELAY = 1.0  # seconds before re-signing a request the device refused
 AUTH_STANDARD = "standard"
 AUTH_BASIC = "basic"
 AUTH_NONE = "none"
@@ -296,6 +297,12 @@ class AlgoClient:
         body = json.dumps(payload).encode() if payload is not None else None
         async with self._lock:
             status, text = await self._send_any_scheme(method, path, body)
+            if status in (401, 403) and self.auth_mode == AUTH_STANDARD and self._password:
+                # A device now and then refuses one correctly signed request (seen on an 8301,
+                # about once in several hundred polls). A refused request did nothing, so sign
+                # it again with a new timestamp and nonce before calling the password wrong.
+                await asyncio.sleep(AUTH_RETRY_DELAY)
+                status, text = await self._send_any_scheme(method, path, body)
         if status in (401, 403):
             if self.auth_mode == AUTH_NONE or not self._password:
                 raise AlgoAuthError(f"{self.host} wants a REST API password")

@@ -334,6 +334,37 @@ async def test_bad_password_starts_reauth(hass: HomeAssistant) -> None:
     )
 
 
+async def test_refused_polls_start_reauth_only_after_three(
+    hass: HomeAssistant, fleet: Fleet
+) -> None:
+    """One refused poll is a failed poll; reauth (which stops polling) waits for three in a row."""
+    coordinator = fleet.entry.runtime_data.coordinators[HOST_8301]  # type: ignore[attr-defined]
+
+    def reauth_started() -> bool:
+        return any(
+            f["context"]["source"] == "reauth" for f in hass.config_entries.flow.async_progress()
+        )
+
+    fleet.password = "changed"
+    for _ in range(2):
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+    assert not coordinator.last_update_success
+    assert not reauth_started()
+
+    # The device accepts the password again: the count starts over.
+    fleet.password = PASSWORD
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert coordinator.last_update_success
+
+    fleet.password = "changed"
+    for _ in range(3):
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+    assert reauth_started()
+
+
 async def test_diagnostics_redact_password(hass: HomeAssistant, fleet: Fleet) -> None:
     from custom_components.algo_speaker.diagnostics import async_get_config_entry_diagnostics
 
